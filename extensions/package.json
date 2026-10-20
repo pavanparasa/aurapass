@@ -1,0 +1,12 @@
+{
+  "name": "aurapass-extensions",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser extensions for the AuraPass password manager. The `type: module` marker only tells Node that the `.js` sources are ES modules so `node --check` can parse them; the browser load order is defined by each manifest.",
+  "scripts": {
+    "build": "./build.sh",
+    "test": "node tools/test-crypto.mjs",
+    "icons": "node tools/make-icons.mjs"
+  }
+}

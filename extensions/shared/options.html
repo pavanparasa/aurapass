@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AuraPass settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="hero">
+        <img class="logo" src="icons/icon128.png" alt="" aria-hidden="true" />
+        <div class="hero-text">
+          <h1>AuraPass</h1>
+          <p class="tagline">Your vault, in this browser.</p>
+        </div>
+        <span id="connection" class="pill">Checking…</span>
+      </header>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Connection</h2>
+            <p class="hint">
+              AuraPass approves each browser once. No token, no address, nothing to
+              copy — approve the request in the desktop app and this browser stays
+              connected until you revoke it.
+            </p>
+          </div>
+        </div>
+
+        <div class="browser">
+          <div class="browser-icon" aria-hidden="true">◎</div>
+          <div class="browser-text">
+            <strong id="browser-name">This browser</strong>
+            <span id="browser-state">Not connected yet</span>
+          </div>
+          <button id="connect" class="secondary" type="button">Connect</button>
+          <button id="forget" class="danger" type="button" hidden>Revoke</button>
+        </div>
+
+        <div id="status" class="status" hidden></div>
+      </section>
+
+      <section class="panel">
+        <h2>Login menu</h2>
+        <p class="hint">Choose how the login lists look — the dropdown inside web pages and the toolbar popup. This settings page always stays light.</p>
+        <div class="segment" role="radiogroup" aria-label="Login menu theme">
+          <button type="button" data-theme-choice="system" role="radio">System</button>
+          <button type="button" data-theme-choice="light" role="radio">Light</button>
+          <button type="button" data-theme-choice="dark" role="radio">Dark</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Filling</h2>
+        <label class="switch">
+          <input type="checkbox" id="autofill" checked />
+          <span>
+            <strong>Offer to fill logins</strong>
+            <em>Show AuraPass on the login fields of the sites you visit.</em>
+          </span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="savePrompt" checked />
+          <span>
+            <strong>Ask to save new passwords</strong>
+            <em>When you sign in with a password AuraPass does not know yet, offer to store it.</em>
+          </span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="fillOnPageLoad" />
+          <span>
+            <strong>Fill automatically</strong>
+            <em>Type the only match into the form as the page loads.</em>
+          </span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="showBadge" checked />
+          <span>
+            <strong>Show a match count</strong>
+            <em>Put the number of matching logins on the toolbar icon.</em>
+          </span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="injectInFrames" checked />
+          <span>
+            <strong>Work inside frames</strong>
+            <em>Also look for login forms in embedded frames.</em>
+          </span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="defaultManager" />
+          <span>
+            <strong>Make AuraPass my password manager</strong>
+            <em>
+              Turns off the browser’s own “offer to save passwords” prompt so you
+              are asked once, by AuraPass.
+            </em>
+          </span>
+        </label>
+        <p class="hint inset" id="default-hint" hidden>
+          Browsers do not let extensions change that setting directly. We opened the
+          browser’s password settings for you: turn off “Offer to save passwords”,
+          then close that tab.
+        </p>
+      </section>
+
+      <section class="panel">
+        <h2>Session</h2>
+        <p class="hint">The vault stays encrypted in transit; locking here locks the desktop vault too.</p>
+        <div class="row">
+          <button id="lock" class="secondary" type="button">Lock vault</button>
+          <button id="open-app" class="primary" type="button">Open AuraPass</button>
+        </div>
+      </section>
+
+      <footer class="foot"><span id="about"></span></footer>
+    </div>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

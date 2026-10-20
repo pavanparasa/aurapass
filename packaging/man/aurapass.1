@@ -1,0 +1,122 @@
+.TH AURAPASS 1 "2026" "aurapass 1.0.0" "User Commands"
+.SH NAME
+aurapass \- command-line interface to AuraPass vaults
+.SH SYNOPSIS
+.B aurapass
+.RI [ options ]
+.I command
+.RI [ arguments ]
+.SH DESCRIPTION
+.B aurapass
+reads and writes AuraPass vaults: single files protected with Argon2id and
+XChaCha20-Poly1305. Every command works on a vault file, so the tool is safe to
+use in scripts and on headless machines.
+.SH GLOBAL OPTIONS
+.TP
+.BR \-v ", " \-\-vault " " \fIFILE\fR
+Vault file to operate on. Falls back to
+.BR $AURAPASS_VAULT ,
+then to the most recently used vault.
+.TP
+.BR \-\-password-file " " \fIFILE\fR
+Read the master password from a file instead of prompting.
+.TP
+.B \-\-password-stdin
+Read the master password from standard input.
+.TP
+.BR \-\-key-file " " \fIFILE\fR
+Key file required in addition to the master password.
+.TP
+.BR \-\-password-env
+Allow reading the master password from
+.BR $AURAPASS_MASTER_PASSWORD .
+.TP
+.BR \-\-json
+Emit machine-readable JSON where a command supports it.
+.TP
+.BR \-q ", " \-\-quiet
+Suppress non-essential output.
+.SH COMMANDS
+.TP
+.B init
+Create a new vault.
+.TP
+.B info
+Show the header of a vault without unlocking it.
+.TP
+.B list
+List or search items.
+.TP
+.B show
+Print one item in full.
+.TP
+.B get
+Print a single field of an item.
+.TP
+.B add
+Add an item.
+.TP
+.B edit
+Modify an item.
+.TP
+.B rm
+Move an item to the bin, or delete it permanently with
+.BR \-\-purge .
+.TP
+.B restore
+Restore an item from the bin.
+.TP
+.B empty-bin
+Permanently delete everything in the bin.
+.TP
+.B gen
+Generate a password, passphrase or PIN.
+.TP
+.B otp
+Print the current one-time password for an item.
+.TP
+.B audit
+Report weak, reused and breached passwords.
+.TP
+.B import
+Add items from another password manager's export.
+.TP
+.B export
+Write a plaintext export or an encrypted backup.
+.TP
+.B passwd
+Change the master password.
+.TP
+.B categories
+List the categories in the vault.
+.TP
+.B activity
+Show the activity log.
+.TP
+.B bridge
+Run the browser bridge in the foreground.
+.TP
+.B bridge-info
+Report the pairing token and the bridge address.
+.SH EXAMPLES
+.PP
+.nf
+aurapass init ~/AuraPass/personal.aurapass
+aurapass add \-t GitHub \-u alice \-\-generate \-U https://github.com
+aurapass get GitHub password | wl-copy
+aurapass audit \-\-breach
+.fi
+.SH FILES
+.TP
+.I ~/.config/aurapass/config.json
+Settings, recent vaults and the browser-bridge pairing token.
+.SH ENVIRONMENT
+.TP
+.B AURAPASS_CONFIG_DIR
+Override the configuration directory.
+.TP
+.B AURAPASS_VAULT
+Default vault path.
+.SH SEE ALSO
+.BR aurapass-desktop (1),
+.BR aurapass-bridge (1)

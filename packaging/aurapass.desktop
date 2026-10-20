@@ -1,0 +1,18 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=AuraPass
+GenericName=Password Manager
+Comment=Offline-first password manager
+Comment[de]=Offline-Passwortverwalter
+Keywords=password;passwords;manager;vault;credentials;security;otp;totp;
+Keywords[de]=Passwort;Passwörter;Verwalter;Tresor;Sicherheit;
+Exec=aurapass-desktop %U
+TryExec=aurapass-desktop
+Icon=aurapass
+Terminal=false
+Categories=Utility;Security;Office;
+StartupNotify=true
+StartupWMClass=aurapass
+MimeType=application/x-aurapass-vault;
+X-GNOME-UsesNotifications=true

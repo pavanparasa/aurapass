@@ -1,0 +1,15 @@
+#!/bin/sh
+# Undo what postinst registered. User vaults and configuration are never
+# touched, not even on purge: they are the user's data.
+set -e
+
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+  if command -v update-mime-database > /dev/null 2>&1; then
+    update-mime-database /usr/share/mime > /dev/null 2>&1 || true
+  fi
+  if command -v update-desktop-database > /dev/null 2>&1; then
+    update-desktop-database -q /usr/share/applications > /dev/null 2>&1 || true
+  fi
+fi
+
+exit 0

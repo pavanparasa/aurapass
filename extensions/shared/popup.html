@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AuraPass</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <div class="logo" aria-hidden="true"></div>
+      <div class="titles">
+        <strong>AuraPass</strong>
+        <span id="subtitle">Connecting…</span>
+      </div>
+      <button id="refresh" class="icon" title="Reconnect and refresh" aria-label="Refresh">⟳</button>
+    </header>
+
+    <main id="app" class="app" aria-live="polite"></main>
+
+    <footer class="bar foot">
+      <button id="generate" class="ghost">Generate</button>
+      <button id="lock" class="ghost">Lock</button>
+      <button id="options" class="ghost">Settings</button>
+    </footer>
+
+    <div id="toast" class="toast" hidden></div>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

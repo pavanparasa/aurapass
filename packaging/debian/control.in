@@ -1,0 +1,37 @@
+Package: aurapass
+Version: @VERSION@
+Section: utils
+Priority: optional
+Architecture: @ARCH@
+Depends: libc6 (>= @LIBC@), libgcc-s1, libx11-6, libxkbcommon0, libwayland-client0
+Recommends: xdg-utils, zenity, fonts-dejavu-core, gnome-shell-extension-appindicator
+Installed-Size: @SIZE@
+Maintainer: pa1 <pa1@aurapass.invalid>
+Homepage: https://github.com/aurapass/aurapass
+Description: offline-first password manager
+ AuraPass keeps passwords, one-time codes, notes and other secrets in a
+ single encrypted vault on your own computer. Nothing leaves the machine:
+ the vault is a local file, the database is local, and the browser bridge
+ only ever listens on 127.0.0.1.
+ .
+ The vault is protected with Argon2id (a memory-hard key derivation
+ function) and XChaCha20-Poly1305 authenticated encryption, in a
+ documented, versioned container format.
+ .
+ On Wayland desktops the app runs through XWayland, because the Wayland
+ protocol lets a client neither hide its window into the tray nor choose
+ where a pop-up appears.
+ .
+ The desktop application draws its interface in software, so it needs no
+ GPU, no EGL and no OpenGL driver; it starts and idles in a few tens of
+ megabytes. gnome-shell-extension-appindicator is recommended so the tray
+ icon shows on GNOME; zenity is recommended so Open/Save use the desktop's
+ native file chooser.
+ .
+ This package installs:
+  * aurapass-desktop - the graphical application,
+  * aurapass         - the command-line tool,
+  * aurapass-bridge  - the localhost bridge for the browser extensions.
+ .
+ Browser extensions (Chromium and Firefox) are installed, unpacked, under
+ /usr/share/aurapass/extensions/.

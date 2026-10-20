@@ -1,0 +1,40 @@
+[package]
+name = "aurapass-core"
+description = "AuraPass core: vault format, cryptography, models, importers and audits"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+argon2.workspace = true
+chacha20poly1305.workspace = true
+getrandom.workspace = true
+hkdf.workspace = true
+hmac.workspace = true
+sha1.workspace = true
+sha2.workspace = true
+subtle.workspace = true
+zeroize.workspace = true
+
+base64.workspace = true
+chrono.workspace = true
+directories.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+
+thiserror.workspace = true
+zxcvbn.workspace = true
+
+# Breach checking (Have I Been Pwned k-anonymity API) needs TLS.
+ureq = { version = "3.4.2", default-features = false, features = ["rustls", "json"], optional = true }
+
+[features]
+default = ["breach"]
+breach = ["dep:ureq"]
+
+[dev-dependencies]
+tempfile = "3"

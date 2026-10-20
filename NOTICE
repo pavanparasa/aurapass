@@ -1,0 +1,157 @@
+AuraPass — notices and attribution
+==================================
+
+AuraPass is an independent project. It is not affiliated with, endorsed by, or
+derived from the source code of Enpass, 1Password, Bitwarden, KeePass or any
+other password manager. It reimplements ideas that are common to the genre —
+a local encrypted vault, a browser bridge, importers — from public
+specifications and documentation.
+
+The name "Enpass" and the names of other products appear only to describe
+import compatibility.
+
+Primary licenses
+----------------
+
+    AuraPass source code ............ MIT OR Apache-2.0
+    Browser extensions .............. MIT OR Apache-2.0
+    EFF large word list ............. CC BY 3.0 US
+
+Rust crates
+-----------
+
+AuraPass is built on crates from crates.io. The permissively licensed
+dependencies and their main authors:
+
+  * Cryptography (RustCrypto — MIT OR Apache-2.0)
+      chacha20poly1305, argon2, hkdf, hmac, sha1, sha2, subtle, zeroize,
+      cipher, aead, and their transitive dependencies.
+      https://github.com/RustCrypto
+  * WebSocket transport
+      tungstenite (MIT OR Apache-2.0) — https://github.com/snapview/tungstenite-rs
+  * Async plumbing
+      futures (MIT OR Apache-2.0) — https://github.com/rust-lang/futures-rs
+      Tokio (MIT) — https://github.com/tokio-rs/tokio — used by iced's runtime.
+  * Graphical user interface
+      iced (MIT) — https://github.com/iced-rs/iced — with the software
+      renderer: iced_tiny_skia, tiny-skia (BSD-3-Clause)
+      — https://github.com/RazrFalcon/tiny-skia — and softbuffer (MIT OR
+      Apache-2.0) — https://github.com/rust-windowing/softbuffer.
+      Text shaping and rasterisation: cosmic-text (MIT) and fontdb (MIT) —
+      https://github.com/pop-os/cosmic-text — plus swash, skrifa, read-fonts,
+      ttf-parser, usvg, resvg and rustybuzz (all MIT OR Apache-2.0).
+      Windowing: winit (Apache-2.0), smithay-client-toolkit (MIT),
+      raw-window-handle, calloop (MIT).
+  * Icons and typefaces
+      iced_fonts (MIT) — https://github.com/iced-rs/iced_fonts — which bundles
+      the Lucide icon set (ISC) — https://lucide.dev — and Lucide's
+      island-of-isolation note. The interface is set in Inter (SIL Open Font
+      License 1.1) by Rasmus Andersson — https://rsms.me/inter — bundled as a
+      variable font in `crates/aurapass-gui/assets/Inter.ttf`.
+      The window icon, the tray glyph and the brand mark are still drawn
+      procedurally, in `crates/aurapass-gui/src/icon.rs`, so the .deb carries
+      no bitmap assets.
+  * System tray
+      ksni (MIT) — https://github.com/iovxw/ksni — a pure-Rust
+      StatusNotifierItem implementation, over zbus (MIT) — https://gitlab.freedesktop.org/dbus/zbus
+      and async-io (Apache-2.0 OR MIT). No libdbus, no GTK.
+  * Icon artwork
+      Item-kind, toolbar and status glyphs are Lucide icons, rendered from the
+      icon font that `iced_fonts` bundles. The window icon, the tray icon and
+      the brand mark are drawn procedurally from primitives in
+      `crates/aurapass-gui/src/icon.rs`. No bitmap asset is shipped.
+  * Password strength estimation
+      zxcvbn (MIT) — https://github.com/smolcoder/zxcvbn-rs, after Dropbox's
+      original zxcvbn by Dan Wheeler and Dropbox, Inc.
+  * Command line
+      clap (MIT OR Apache-2.0) — https://github.com/clap-rs/clap
+  * Serialisation and time
+      serde, serde_json (MIT OR Apache-2.0), chrono (MIT OR Apache-2.0),
+      uuid (Apache-2.0 OR MIT)
+  * Platform and utility
+      directories (MIT OR Apache-2.0), base64 (MIT OR Apache-2.0),
+      thiserror (MIT OR Apache-2.0), anyhow (MIT OR Apache-2.0),
+      getrandom (MIT OR Apache-2.0)
+  * Fonts bundled with the toolkit
+      Inter (SIL Open Font License 1.1) and the Lucide icon font that
+      `iced_fonts` redistributes (ISC).
+
+A complete, machine-readable list of the exact versions can be reproduced with
+`cargo metadata` or `cargo license` from a checkout.
+
+Vendored, patched copy of iced_tiny_skia
+----------------------------------------
+
+`vendor/iced_tiny_skia/` is iced_tiny_skia 0.14.1, MIT licensed, copyright
+2019 Héctor Ramón Jiménez and the iced contributors
+(https://github.com/iced-rs/iced). It is vendored unmodified except for one
+patch, marked with an "AuraPass patch" comment in
+`src/window/compositor.rs`:
+
+  `present()` now always damages the whole window instead of asking iced to
+  diff consecutive frames. The automatic diff groups damage rectangles in a
+  single pass, so overlapping translucent layers — anti-aliased text, card
+  shadows, the modal scrim — were composited more than once per frame and
+  drifted towards black, and areas that stopped being drawn kept stale pixels.
+  A full-frame present is the same path the screenshot renderer already used,
+  costs little for a flat interface at this size, and is deterministic.
+
+The patch is AuraPass's own work and is offered under the same MIT OR
+Apache-2.0 terms as the rest of AuraPass. Send upstream fixes to the iced
+project; they are not AuraPass changes.
+
+Vendored, patched copy of iced_widget
+-------------------------------------
+
+`vendor/iced_widget/` is iced_widget 0.14.2, MIT licensed, copyright 2019
+Héctor Ramón Jiménez and the iced contributors
+(https://github.com/iced-rs/iced). It is vendored with two small patches,
+marked with "AuraPass patch" comments in `src/scrollable.rs` (and an import
+cleanup in `src/pick_list.rs`):
+
+  `scrollable.rs` now gives the scrollbar thumb a 36 px minimum length and
+  clamps its travel inside the track. The stock renderer computes a
+  proportional thumb with a 2 px floor, which is nearly impossible to grab in a
+  1,600-item list.
+
+  `pick_list.rs` drops a legacy `use std::f32;` import so the crate builds
+  without a deprecated-constant warning on the current toolchain.
+
+These patches are AuraPass's own work and are offered under the same MIT OR
+Apache-2.0 terms as the rest of AuraPass. Send upstream fixes to the iced
+project; they are not AuraPass changes.
+
+Data files
+----------
+
+  * `crates/aurapass-core/data/eff_large_wordlist.txt` is the Electronic
+    Frontier Foundation's "long word list", published in 2016 for passphrase
+    generation and distributed under the Creative Commons Attribution 3.0
+    United States license.
+    https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases
+    The file is used unchanged; the 7,776 words and their dice numbers are the
+    EFF's.
+
+Specifications implemented
+--------------------------
+
+  * RFC 8439 — ChaCha20 and Poly1305 for IETF Protocols.
+  * draft-irtf-cfrg-xchacha-03 — XChaCha20 and XChaCha20-Poly1305.
+  * RFC 5869 — HMAC-based Extract-and-Expand Key Derivation Function (HKDF).
+  * RFC 6238 — TOTP: Time-Based One-Time Password Algorithm.
+  * RFC 4226 — HOTP: An HMAC-Based One-Time Password Algorithm.
+  * RFC 4648 — The Base16, Base32, and Base64 Data Encodings.
+  * Argon2 (RFC 9106) via the `argon2` crate.
+  * Debian Policy Manual and the Filesystem Hierarchy Standard.
+
+Format interoperability
+-----------------------
+
+  * The Enpass JSON, 1Password 1PIF/CSV, Bitwarden JSON, LastPass CSV and
+    KeePass CSV/Xml importers were written against vendor-published export
+    formats and, for 1PIF, against the format as documented by 1Password.
+  * Have I Been Pwned range queries use the k-anonymity API v3 documented at
+    https://haveibeenpwned.com/API/v3#PwnedPasswords.
+
+If you believe something here is attributed incorrectly, or a licence is
+missing, please open an issue — the intent is to credit everyone properly.

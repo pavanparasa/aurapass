@@ -1,0 +1,56 @@
+.TH AURAPASS-BRIDGE 1 "2026" "aurapass 1.0.0" "User Commands"
+.SH NAME
+aurapass-bridge \- serve an AuraPass vault to browser extensions over localhost
+.SH SYNOPSIS
+.B aurapass-bridge
+.RI [ options ]
+.SH DESCRIPTION
+.B aurapass-bridge
+keeps an encrypted vault unlocked and answers the AuraPass browser extensions
+over a WebSocket bound to
+.BR 127.0.0.1 .
+The desktop application embeds the same server; this binary exists for
+machines with no graphical session.
+.PP
+Every frame is sealed with XChaCha20-Poly1305 under a key derived from the
+pairing token, and the listener never binds a routable address. The token is
+stored in the configuration file with mode 0600.
+.SH OPTIONS
+.TP
+.BR \-v ", " \-\-vault " " \fIFILE\fR
+Vault file to open. Defaults to the most recently used vault.
+.TP
+.BR \-p ", " \-\-port " " \fIPORT\fR
+Port to listen on. Falls back to the next free port if busy.
+.TP
+.BR \-\-password-file " " \fIFILE\fR
+Read the master password from a file instead of prompting.
+.TP
+.BR \-\-password-stdin
+Read the master password from standard input.
+.TP
+.BR \-\-password-env
+Allow reading the master password from
+.BR $AURAPASS_MASTER_PASSWORD .
+.TP
+.BR \-\-key-file " " \fIFILE\fR
+Key file required to unlock the vault.
+.TP
+.B \-\-allow-remote-unlock
+Start locked and let the extension unlock the vault. Off by default, because
+anyone holding the pairing token could then guess the master password.
+.TP
+.B \-\-lock-on-disconnect
+Lock the vault when the last extension disconnects.
+.TP
+.B \-\-print-token
+Print the pairing token and exit.
+.TP
+.B \-\-rotate-token
+Replace the pairing token, then exit.
+.TP
+.BR \-\-config-dir " " \fIDIR\fR
+Use an alternative configuration directory.
+.SH SEE ALSO
+.BR aurapass (1),
+.BR aurapass-desktop (1)

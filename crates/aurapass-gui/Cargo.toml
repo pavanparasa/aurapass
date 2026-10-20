@@ -1,0 +1,37 @@
+[package]
+name = "aurapass-gui"
+description = "AuraPass desktop application (iced)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "aurapass-desktop"
+path = "src/main.rs"
+
+# AuraPass renders through iced's *software* rasteriser (tiny-skia) on purpose:
+# no EGL/GL/Vulkan means no Mesa driver gets loaded, which keeps the resident
+# set of the desktop app in the low tens of megabytes. `wgpu` is deliberately
+# not enabled.
+[dependencies]
+aurapass-core.workspace = true
+aurapass-bridge = { path = "../aurapass-bridge", version = "1.0.0" }
+ksni = { version = "0.3", default-features = false, features = ["async-io", "blocking"] }
+iced = { version = "0.14", default-features = false, features = [
+    "tiny-skia",
+    "crisp",
+    "thread-pool",
+    "smol",
+    "linux-theme-detection",
+    "x11",
+    "wayland",
+] }
+iced_fonts = { version = "0.3", default-features = false, features = ["lucide"] }
+chrono.workspace = true
+futures = "0.3"
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true

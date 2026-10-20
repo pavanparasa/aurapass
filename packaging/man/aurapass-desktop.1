@@ -1,0 +1,70 @@
+.TH AURAPASS-DESKTOP 1 "2026" "aurapass 1.0.0" "User Commands"
+.SH NAME
+aurapass-desktop \- the AuraPass graphical application
+.SH SYNOPSIS
+.B aurapass-desktop
+.RI [ options ]
+.SH DESCRIPTION
+.B aurapass-desktop
+is the AuraPass desktop application. It opens a vault, unlocks it with the
+master password, and lets you browse, edit, generate and audit credentials.
+It also hosts the browser bridge in-process, so the extensions work while the
+window is open.
+.PP
+The user interface is built with the
+.B iced
+toolkit on top of its
+.B tiny-skia
+software renderer, so it draws its own widgets on the CPU. The only system
+services it needs are a Wayland or X11 window and a clipboard: there is no
+GPU, EGL or OpenGL requirement, and no graphics driver is loaded.
+.SH TRAY ICON AND QUICK ASSISTANT
+When a
+.B StatusNotifierWatcher
+is present on the session bus (Ubuntu, GNOME with the AppIndicator extension,
+KDE), AuraPass shows a tray icon with a menu offering
+.IR "Open AuraPass" ,
+.IR "Quick assistant" ,
+.IR "Lock vault"
+and
+.IR "Quit" .
+Left-clicking the icon shows or hides the window; middle-clicking it opens the
+quick assistant.
+.PP
+Closing the window hides it to the tray instead of quitting. Use
+.I "Quit"
+from the tray menu, or from the menu bar inside the application, to exit.
+Both behaviours can be switched off in Settings.
+.PP
+The quick assistant is a compact, always-on-top panel with the password
+generator: password, passphrase and PIN modes, an entropy estimate, and a
+history that is held in memory for the session only and never written to
+disk. It is usable while the vault is locked, because the generator needs no
+vault. It folds away as soon as you click elsewhere. When the main window is
+already open the same generator opens inside it as a dialog instead.
+.PP
+If no
+.B StatusNotifierWatcher
+is available, AuraPass reports that the tray could not be registered and
+closes normally instead of hiding, so the window cannot be lost.
+.SH OPTIONS
+.TP
+.BR \-v ", " \-\-vault " " \fIFILE\fR
+Vault file to open on start.
+.TP
+.BR \-\-config-dir " " \fIDIR\fR
+Use an alternative configuration directory.
+.SH FILES
+.TP
+.I ~/.config/aurapass/config.json
+Settings, recent vaults and the browser-bridge pairing token.
+.SH ENVIRONMENT
+.TP
+.B AURAPASS_CONFIG_DIR
+Override the configuration directory.
+.TP
+.B AURAPASS_VAULT
+Default vault path.
+.SH SEE ALSO
+.BR aurapass (1),
+.BR aurapass-bridge (1)

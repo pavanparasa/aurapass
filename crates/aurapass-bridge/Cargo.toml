@@ -1,0 +1,30 @@
+[package]
+name = "aurapass-bridge"
+description = "Localhost bridge connecting AuraPass to browser extensions"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[lib]
+name = "aurapass_bridge"
+path = "src/lib.rs"
+
+[[bin]]
+name = "aurapass-bridge"
+path = "src/main.rs"
+
+[dependencies]
+aurapass-core.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tungstenite.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+tempfile = "3"

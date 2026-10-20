@@ -1,0 +1,23 @@
+[package]
+name = "aurapass-cli"
+description = "Command-line interface to AuraPass vaults"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "aurapass"
+path = "src/main.rs"
+
+[dependencies]
+aurapass-core.workspace = true
+aurapass-bridge = { path = "../aurapass-bridge", version = "1.0.0" }
+anyhow.workspace = true
+chrono.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true

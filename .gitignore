@@ -1,0 +1,70 @@
+# Build outputs
+/target/
+/dist/
+*.deb
+*.ddeb
+*.udeb
+*.changes
+*.buildinfo
+*.crx
+*.xpi
+
+# In-repo toolchain (installed by scripts/bootstrap-toolchain.sh)
+/.toolchain/
+
+# Private keys and certificates
+/packaging/keys/
+*.pem
+*.key
+*.pk8
+*.p12
+*.pfx
+
+# User vaults and passwords (never commit credentials or test vaults)
+*.aurapass
+*.aurapass.bak
+*.vault
+
+# Node and extension artifacts
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Assembled browser extensions: only manifests are checked in.
+# Run extensions/build.sh to regenerate all extension files from extensions/shared/.
+/extensions/chromium/*
+!/extensions/chromium/manifest.json
+/extensions/firefox/*
+!/extensions/firefox/manifest.json
+
+# Development scratch spaces, captures and test fixtures
+/_probe/
+/_scratch/
+/tmp/
+*.ppm
+*.log
+
+# Editors and IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*~
+.#*
+#*#
+*.sublime-project
+*.sublime-workspace
+
+# Operating System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+

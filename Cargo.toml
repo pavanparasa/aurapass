@@ -1,0 +1,66 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/aurapass-core",
+    "crates/aurapass-cli",
+    "crates/aurapass-bridge",
+    "crates/aurapass-gui",
+]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+authors = ["pa1"]
+repository = "https://github.com/aurapass/aurapass"
+homepage = "https://github.com/aurapass/aurapass"
+description = "AuraPass — an offline-first, local-only password manager for Linux"
+
+[workspace.dependencies]
+aurapass-core = { path = "crates/aurapass-core", version = "1.0.0" }
+
+# crypto
+argon2 = "0.6.0"
+chacha20poly1305 = "0.11.0"
+getrandom = "0.4.3"
+hkdf = "0.13.0"
+hmac = "0.13.0"
+sha1 = "0.11.0"
+sha2 = "0.11.1"
+subtle = "2.6.1"
+zeroize = { version = "1.9.1", features = ["derive"] }
+
+# data
+base64 = "0.23.1"
+chrono = { version = "0.4.45", features = ["serde"] }
+directories = "6.0.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+uuid = { version = "1.28.0", features = ["v4", "serde"] }
+
+# misc
+anyhow = "1.0.104"
+clap = { version = "4.6.7", features = ["derive", "wrap_help", "suggestions", "env"] }
+thiserror = "2.0.21"
+tungstenite = "0.30.0"
+zxcvbn = "3.1.1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"
+
+[profile.dev]
+opt-level = 1
+
+# The software renderer is vendored so that it always repaints the whole window
+# instead of trusting its incremental damage heuristic; see
+# `vendor/iced_tiny_skia/src/window/compositor.rs` and `NOTICE`.
+[patch.crates-io]
+iced_tiny_skia = { path = "vendor/iced_tiny_skia" }
+# AuraPass patch: enforce a usable minimum scrollbar-thumb length, and clamp
+# its travel, so 1,600-item lists remain easy to drag.
+iced_widget = { path = "vendor/iced_widget" }

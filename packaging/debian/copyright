@@ -1,0 +1,78 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: aurapass
+Upstream-Contact: pa1 <pa1@aurapass.invalid>
+Source: https://github.com/aurapass/aurapass
+
+Files: *
+Copyright: 2026 pa1
+License: MIT or Apache-2.0
+ AuraPass is free software: you can redistribute it and/or modify it under the
+ terms of either the MIT License or the Apache License, Version 2.0, at your
+ option.
+ .
+ This package is distributed in the hope that it will be useful, but WITHOUT
+ ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ FOR A PARTICULAR PURPOSE. See the licenses for details.
+ .
+ On Debian systems the full texts of these licenses can be found in
+ /usr/share/common-licenses/MIT and /usr/share/common-licenses/Apache-2.0.
+
+Files: crates/aurapass-core/data/eff_large_wordlist.txt
+Copyright: 2016 Electronic Frontier Foundation
+License: CC-BY-3.0
+ The EFF "long word list" used for passphrase generation. Distributed under
+ the Creative Commons Attribution 3.0 United States license.
+ .
+ https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases
+
+Comment: The compiled binaries also link the following third-party crates,
+ whose license notices are reproduced at build time. They are all under
+ permissive licenses (MIT, Apache-2.0, BSD-3-Clause or Zlib):
+ .
+  * iced, iced_core, iced_widget, iced_tiny_skia, softbuffer (MIT) and
+    tiny-skia (BSD-3-Clause) — the interface and its software renderer.
+  * winit (Apache-2.0), smithay-client-toolkit, calloop,
+    raw-window-handle (MIT/Apache-2.0)
+  * cosmic-text, fontdb, swash, skrifa, read-fonts, ttf-parser, usvg,
+    resvg, rustybuzz (MIT OR Apache-2.0)
+  * RustCrypto: chacha20poly1305, argon2, hkdf, hmac, sha1, sha2, subtle,
+    zeroize, and their dependencies (MIT OR Apache-2.0)
+  * tungstenite (MIT OR Apache-2.0)
+  * ksni (MIT) and zbus (MIT) for the system tray
+  * zxcvbn (MIT)
+  * clap (MIT OR Apache-2.0)
+  * serde, serde_json (MIT OR Apache-2.0)
+  * chrono (MIT OR Apache-2.0)
+  * uuid (Apache-2.0 OR MIT)
+  * directories (MIT OR Apache-2.0)
+  * base64 (MIT OR Apache-2.0)
+  * thiserror, anyhow (MIT OR Apache-2.0)
+
+Files: vendor/iced_tiny_skia/*
+Copyright: 2019 Héctor Ramón Jiménez and the iced contributors
+License: MIT
+ The iced software renderer, vendored so AuraPass can carry one patch:
+ `present()` always damages the whole window instead of relying on automatic
+ frame diffing, which composited overlapping translucent layers more than once
+ and made panels darken. The patch is marked with an "AuraPass patch" comment in
+ src/window/compositor.rs. Upstream: https://github.com/iced-rs/iced
+Comment: The pure-Rust software renderer for iced; the patch is AuraPass's own
+ work and is offered under the same MIT OR Apache-2.0 terms as the rest of
+ AuraPass.
+
+Files: crates/aurapass-gui/assets/Inter.ttf
+Copyright: 2016 The Inter Project Authors (https://github.com/rsms/inter)
+License: OFL-1.1
+ The Inter typeface, distributed under the SIL Open Font License, Version
+ 1.1. The full license text is reproduced in the upstream NOTICE file and
+ at https://openfontlicense.org.
+ .
+ The Lucide icon font, redistributed by the iced_fonts crate, is under the
+ ISC license: Copyright (c) for portions of Lucide are held by Cole Bemis
+ 2013-2022 as part of Feather (MIT); all other copyright for Lucide is held
+ by Lucide Contributors 2022. https://lucide.dev
+
+Comment: The browser extension code is original to this project and shares the same
+ MIT OR Apache-2.0 terms. It implements ChaCha20, Poly1305 and XChaCha20 from
+ the public specifications (RFC 8439 and draft-irtf-cfrg-xchacha-03) and uses
+ only WebCrypto for hashing.

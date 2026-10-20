@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-aurapass-vault">
+    <comment>An AuraPass vault</comment>
+    <comment xml:lang="de">Ein AuraPass-Tresor</comment>
+    <magic priority="60">
+      <match type="string" value="aurapass-vault" offset="0"/>
+    </magic>
+    <glob pattern="*.aurapass"/>
+  </mime-type>
+</mime-info>
