@@ -35,6 +35,7 @@ command -v dpkg-deb > /dev/null 2>&1 || fail "dpkg-deb is required to build a .d
 source "$ROOT/scripts/env.sh"
 
 VERSION="$(awk '/^\[workspace\.package\]/{f=1} f && /^version[[:space:]]*=/{gsub(/[" ]/,"",$3); print $3; exit}' Cargo.toml)"
+EXT_VERSION="$(awk -F'"' '/"version"/{print $4; exit}' extensions/firefox/manifest.json)"
 ARCH="$(dpkg --print-architecture)"
 TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/target}/release"
 STAGE="$ROOT/target/deb/aurapass_${VERSION}_${ARCH}"
@@ -42,8 +43,9 @@ OUT_DIR="$ROOT/dist"
 OUT="$OUT_DIR/aurapass_${VERSION}_${ARCH}.deb"
 
 [ -n "$VERSION" ] || fail "could not read the workspace version from Cargo.toml"
+[ -n "$EXT_VERSION" ] || fail "could not read the extension version from extensions/firefox/manifest.json"
 
-BINARIES=(aurapass aurapass-desktop aurapass-bridge)
+BINARIES=(aurapass aurapass-desktop aurapass-bridge aurapass-native-host)
 
 # ------------------------------------------------------------------- build
 
@@ -74,7 +76,8 @@ mkdir -p \
   "$STAGE/usr/share/icons/hicolor/scalable/apps" \
   "$STAGE/usr/share/icons/hicolor/128x128/apps" \
   "$STAGE/usr/share/man/man1" \
-  "$STAGE/usr/share/mime/packages"
+  "$STAGE/usr/share/mime/packages" \
+  "$STAGE/usr/lib/mozilla/native-messaging-hosts"
 
 for binary in "${BINARIES[@]}"; do
   install -m 0755 "$TARGET_DIR/$binary" "$STAGE/usr/bin/$binary"
@@ -86,7 +89,9 @@ install -m 0644 packaging/aurapass.svg "$STAGE/usr/share/icons/hicolor/scalable/
 install -m 0644 extensions/shared/icons/icon128.png \
   "$STAGE/usr/share/icons/hicolor/128x128/apps/aurapass.png"
 install -m 0644 packaging/aurapass-vault.xml "$STAGE/usr/share/mime/packages/aurapass-vault.xml"
-say "installed desktop entry, icons and MIME type"
+install -m 0644 packaging/aurapass-native-host.json \
+  "$STAGE/usr/lib/mozilla/native-messaging-hosts/aurapass_bridge.json"
+say "installed desktop entry, icons, MIME type and Firefox native host"
 
 for page in packaging/man/*.1; do
   [ -e "$page" ] || continue
@@ -113,8 +118,11 @@ if [ "$EXTENSIONS" = 1 ]; then
   # The signed .crx is deliberately not installed: Chrome rejects a locally
   # built CRX with CRX_REQUIRED_PROOF_MISSING, so shipping it only invites
   # users to hit a dead end. It stays in dist/ for enterprise deployments.
-  for pkg in "$OUT_DIR"/aurapass-chromium-*.zip \
-             "$OUT_DIR"/aurapass-firefox-*.zip "$OUT_DIR"/aurapass-firefox-*.xpi; do
+  # Only ship packages for the version in the manifest. Stale archives from an
+  # older build must not sneak into a new .deb.
+  for pkg in "$OUT_DIR/aurapass-chromium-${EXT_VERSION}.zip" \
+             "$OUT_DIR/aurapass-firefox-${EXT_VERSION}.zip" \
+             "$OUT_DIR/aurapass-firefox-${EXT_VERSION}.xpi"; do
     [ -e "$pkg" ] || continue
     install -m 0644 "$pkg" "$STAGE/usr/share/aurapass/extensions/$(basename "$pkg")"
   done

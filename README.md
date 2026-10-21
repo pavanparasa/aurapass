@@ -4,16 +4,18 @@ A local-first password manager for Linux, with a graphical app, a scriptable
 command-line tool, and browser extensions for Chromium and Firefox.
 
 Everything stays on your computer. There is no account, no sync service and no
-telemetry. The vault is one file that you can copy, back up or delete. When the
-browser extensions talk to AuraPass they do it over a WebSocket bound to
-`127.0.0.1`, encrypted end to end with a pairing token.
+telemetry. The vault is one file that you can copy, back up or delete. Browser
+traffic is authenticated with a pairing token and encrypted end to end.
+Chromium uses the loopback bridge; Firefox uses the browser's native-messaging
+channel, which avoids HTTPS-Only and local-network restrictions entirely.
 
 ```
-aurapass 1.0.0
- ├── aurapass-desktop   iced graphical application   (also hosts the bridge)
- ├── aurapass           command-line tool
- ├── aurapass-bridge    headless host for the browser bridge
- └── extensions/        Chromium and Firefox extensions (MV3)
+aurapass 1.0.1
+ ├── aurapass-desktop      iced graphical application   (also hosts the bridge)
+ ├── aurapass              command-line tool
+ ├── aurapass-bridge       headless host for the browser bridge
+ ├── aurapass-native-host  Firefox native-messaging relay
+ └── extensions/           Chromium and Firefox extensions (MV3)
 ```
 
 ## Features
@@ -35,7 +37,9 @@ aurapass 1.0.0
   CSV, 1Password CSV, Chrome CSV, KeePass CSV, and a generic CSV/JSON, with
   format auto-detection. Export to CSV, JSON or an encrypted backup.
 * **Browser integration** — autofill, TOTP, save prompts, a search popup and a
-  generator, over an authenticated loopback bridge.
+  generator. Chromium uses an authenticated loopback bridge; Firefox uses a
+  native-messaging host installed by the package, so it works with HTTPS-Only
+  Mode and Firefox's local-network protections.
 * **Desktop shell** — a tray icon with a menu, close-to-tray, a **quick
   assistant** pop-up with a generator and a session-only history, a light or
   dark theme, and crisply drawn icons throughout (no emoji).
@@ -50,7 +54,7 @@ aurapass 1.0.0
 | Concern | Approach |
 |---|---|
 | Data at rest | Argon2id + XChaCha20-Poly1305, authenticated header, `0600` |
-| Data in transit | loopback-only WebSocket, token-authenticated, sealed frames |
+| Data in transit | token-authenticated, sealed frames over a loopback bridge (Chromium) or the browser's native-messaging channel (Firefox) |
 | A malicious web page | content scripts never hold the token or reach the bridge |
 | Memory | decrypted keys and passwords use `zeroize` |
 | Damage to the vault file | atomic replace; the previous file survives a failed write |
@@ -87,6 +91,9 @@ AuraPass is a working clone, not a finished commercial product. Known limits:
   | locked, idle | 38 MB | 23 MB | 0 |
   | unlocked, idle | 42 MB | 27 MB | 0 |
   | unlocked, bridge running | 42 MB | 34 MB | 0 |
+
+## Changes & Fixes
+Extensions have been updated to version 1.0.4
 
 ## Credit and licence
 

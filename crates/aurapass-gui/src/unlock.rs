@@ -11,6 +11,18 @@ use crate::glyph::{self, Glyph};
 use crate::theme::{self, Tokens};
 use crate::widgets as w;
 
+/// Stable widget id for the master-password or PIN field. Only one of the two
+/// is rendered at a time, so they can share it.
+pub const UNLOCK_FIELD: &str = "aurapass-unlock-field";
+
+/// Focus and place the caret at the end of the unlock field.
+fn focus_field() -> Task<AppMessage> {
+    Task::batch([
+        iced::widget::operation::focus(UNLOCK_FIELD),
+        iced::widget::operation::move_cursor_to_end(UNLOCK_FIELD),
+    ])
+}
+
 /// PIN fields accept digits only, up to the format limit.
 fn digits_only(value: &str) -> bool {
     value.len() <= PIN_MAX_LEN && value.chars().all(|c| c.is_ascii_digit())
@@ -129,12 +141,14 @@ pub fn update(state: &mut AppState, message: Message) -> Task<AppMessage> {
             state.unlock.use_pin = false;
             state.unlock.pin.clear();
             state.unlock.error = None;
+            return focus_field();
         }
         Message::UsePin => {
             if state.pin_available_for_selected() {
                 state.unlock.use_pin = true;
                 state.unlock.password.clear();
                 state.unlock.error = None;
+                return focus_field();
             }
         }
         Message::KeyFile(v) => state.unlock.key_file = v,
@@ -156,6 +170,7 @@ pub fn update(state: &mut AppState, message: Message) -> Task<AppMessage> {
             state.unlock.creating = false;
             state.unlock.error = None;
             state.refresh_pin_mode();
+            return focus_field();
         }
         Message::NewName(v) => state.unlock.new_name = v,
         Message::NewPath(v) => state.unlock.new_path = v,
@@ -214,6 +229,7 @@ pub fn update(state: &mut AppState, message: Message) -> Task<AppMessage> {
                 state.unlock.error = None;
                 state.unlock.password.clear();
                 state.refresh_pin_mode();
+                return focus_field();
             }
         }
         Message::BrowseNewVault => {
@@ -317,8 +333,9 @@ fn password_input<'a>(
     reveal: bool,
     on_input: fn(String) -> Message,
     on_submit: Message,
+    id: Option<&'static str>,
 ) -> Element<'a, Message> {
-    let field = text_input(placeholder, value)
+    let mut field = text_input(placeholder, value)
         .on_input(on_input)
         .on_submit(on_submit)
         .secure(!reveal)
@@ -326,6 +343,9 @@ fn password_input<'a>(
         .size(theme::T_BODY)
         .font(theme::REG)
         .style(theme::input);
+    if let Some(id) = id {
+        field = field.id(id);
+    }
 
     row![
         field,
@@ -497,6 +517,7 @@ fn unlock_form(state: &AppState) -> Element<'_, Message> {
             state.unlock.reveal,
             Message::Pin,
             Message::Submit,
+            Some(UNLOCK_FIELD),
         ));
         body.push(w::vgap(6.0));
         body.push(w::small(
@@ -511,6 +532,7 @@ fn unlock_form(state: &AppState) -> Element<'_, Message> {
             state.unlock.reveal,
             Message::Password,
             Message::Submit,
+            Some(UNLOCK_FIELD),
         ));
 
         body.push(w::vgap(14.0));
@@ -633,6 +655,7 @@ fn create_form(state: &AppState) -> Element<'_, Message> {
             state.unlock.reveal,
             Message::NewPassword,
             Message::Create,
+            None,
         ),
         w::vgap(14.0),
         w::micro("Repeat the master password"),
@@ -643,6 +666,7 @@ fn create_form(state: &AppState) -> Element<'_, Message> {
             state.unlock.reveal,
             Message::NewConfirm,
             Message::Create,
+            None,
         ),
         w::vgap(16.0),
         w::micro(format!("Unlock PIN ({PIN_MIN_LEN}–{PIN_MAX_LEN} digits)")),
@@ -654,6 +678,7 @@ fn create_form(state: &AppState) -> Element<'_, Message> {
                 state.unlock.reveal,
                 Message::NewPin,
                 Message::Create,
+                None,
             ))
             .width(Length::Fill),
             w::gap(8.0),
@@ -663,6 +688,7 @@ fn create_form(state: &AppState) -> Element<'_, Message> {
                 state.unlock.reveal,
                 Message::NewPinConfirm,
                 Message::Create,
+                None,
             ))
             .width(Length::Fill),
         ]

@@ -8,7 +8,7 @@ members = [
 ]
 
 [workspace.package]
-version = "1.0.0"
+version = "1.0.1"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT OR Apache-2.0"
@@ -18,7 +18,7 @@ homepage = "https://github.com/aurapass/aurapass"
 description = "AuraPass — an offline-first, local-only password manager for Linux"
 
 [workspace.dependencies]
-aurapass-core = { path = "crates/aurapass-core", version = "1.0.0" }
+aurapass-core = { path = "crates/aurapass-core", version = "1.0.1" }
 
 # crypto
 argon2 = "0.6.0"

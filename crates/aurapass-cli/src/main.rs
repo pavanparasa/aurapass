@@ -838,7 +838,8 @@ fn build_query(args: &ListArgs) -> Result<VaultQuery> {
         kinds,
         tags: args.tag.clone(),
         favorites_only: args.favorites,
-        include_trashed: args.trash || args.only_trash,
+        include_trashed: args.trash,
+        only_trashed: args.only_trash,
         sort: args.sort.into(),
         category: None,
     })
@@ -877,12 +878,7 @@ fn cmd_list(cli: &Cli, vault: &UnlockedVault, args: &ListArgs) -> Result<()> {
     if let Some(category) = &args.category {
         query.category = Some(resolve_category(vault, category)?);
     }
-    let mut ids = vault.query(&query);
-    if args.only_trash {
-        ids.retain(|id| vault.item(*id).is_some_and(|i| i.trashed));
-    } else if !args.trash {
-        ids.retain(|id| vault.item(*id).is_some_and(|i| !i.trashed));
-    }
+    let ids = vault.query(&query);
     let items: Vec<&Item> = ids.iter().filter_map(|id| vault.item(*id)).collect();
 
     if cli.json {

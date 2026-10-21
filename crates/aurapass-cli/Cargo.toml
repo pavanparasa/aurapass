@@ -14,7 +14,7 @@ path = "src/main.rs"
 
 [dependencies]
 aurapass-core.workspace = true
-aurapass-bridge = { path = "../aurapass-bridge", version = "1.0.0" }
+aurapass-bridge = { path = "../aurapass-bridge", version = "1.0.1" }
 anyhow.workspace = true
 chrono.workspace = true
 clap.workspace = true

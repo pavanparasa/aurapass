@@ -13,6 +13,7 @@
 //! * keep the toolbar badge showing how many logins match the current page.
 
 import { AuraPassBridge } from "./lib/bridge.js";
+import { NativeSocket } from "./lib/native.js";
 import {
   api,
   browserName,
@@ -35,8 +36,20 @@ let lastStatus = null;
 const pageMatches = new Map();
 
 const VERSION = api.runtime.getManifest().version;
-const BROWSER =
-  typeof globalThis.browser !== "undefined" && !globalThis.chrome ? "firefox" : "chromium";
+// Firefox exposes both `browser` and `chrome` now, so the presence of either
+// namespace says nothing about the browser. The extension URL scheme is stable
+// and is what the native-messaging transport depends on.
+const BROWSER = (() => {
+  try {
+    return api.runtime.getURL("").startsWith("moz-extension:")
+      ? "firefox"
+      : "chromium";
+  } catch {
+    return "chromium";
+  }
+})();
+const USE_NATIVE =
+  BROWSER === "firefox" && typeof api.runtime.connectNative === "function";
 
 // --------------------------------------------------------------- connection
 
@@ -60,6 +73,7 @@ async function ensureBridge(force = false) {
       port: settings.port,
       client: `aurapass-${BROWSER}-extension/${VERSION}`,
       autoReconnect: false,
+      createSocket: USE_NATIVE ? (url) => new NativeSocket(url) : undefined,
     });
     bridgeKey = key;
   }
@@ -112,6 +126,95 @@ function failure(error) {
 
 function ok(payload) {
   return { ok: true, ...payload };
+}
+
+// -------------------------------------------------------- pending save prompts
+
+/**
+ * When a page submits a login, the content script stores the candidate here
+ * *before* the page navigates. The next page in the same tab claims it and
+ * shows the save banner. A page-local timer cannot do that: a classic form
+ * post destroys the old document, and with it every timeout and banner.
+ *
+ * `storage.session` is memory-backed, extension-only and cleared when the
+ * browser exits, which is the right lifetime for a plaintext password that is
+ * waiting for one click. A short TTL stops stale candidates from reappearing
+ * on an unrelated later page if the user navigates away.
+ */
+const PENDING_SAVE_KEY = "aurapass.pendingSaves";
+const PENDING_SAVE_TTL_MS = 5 * 60 * 1000;
+let pendingSaveFallback = new Map();
+
+function pendingSaveArea() {
+  try {
+    return api.storage && api.storage.session ? api.storage.session : null;
+  } catch {
+    return null;
+  }
+}
+
+async function readPendingSaves() {
+  const area = pendingSaveArea();
+  if (area) {
+    try {
+      const data = await promisify(area.get, area, PENDING_SAVE_KEY);
+      return (data && data[PENDING_SAVE_KEY]) || {};
+    } catch {
+      // Fall through to the in-memory copy.
+    }
+  }
+  return Object.fromEntries(pendingSaveFallback);
+}
+
+async function writePendingSaves(saves) {
+  const area = pendingSaveArea();
+  if (area) {
+    try {
+      await promisify(area.set, area, { [PENDING_SAVE_KEY]: saves });
+      return;
+    } catch {
+      // Fall through to the in-memory copy.
+    }
+  }
+  pendingSaveFallback = new Map(Object.entries(saves));
+}
+
+function prunePendingSaves(saves) {
+  const now = Date.now();
+  for (const [key, candidate] of Object.entries(saves)) {
+    if (!candidate || !candidate.savedAt
+      || now - candidate.savedAt > PENDING_SAVE_TTL_MS) {
+      delete saves[key];
+    }
+  }
+  return saves;
+}
+
+async function putPendingSave(tabId, candidate) {
+  const saves = prunePendingSaves(await readPendingSaves());
+  saves[String(tabId)] = { ...candidate, savedAt: Date.now() };
+  await writePendingSaves(saves);
+}
+
+async function takePendingSave(tabId) {
+  const saves = prunePendingSaves(await readPendingSaves());
+  const key = String(tabId);
+  const candidate = saves[key];
+  delete saves[key];
+  await writePendingSaves(saves);
+  return candidate || null;
+}
+
+async function expirePendingSaves() {
+  const saves = prunePendingSaves(await readPendingSaves());
+  await writePendingSaves(saves);
+}
+
+async function dropPendingSave(tabId) {
+  const saves = await readPendingSaves();
+  if (!(String(tabId) in saves)) return;
+  delete saves[String(tabId)];
+  await writePendingSaves(saves);
 }
 
 // ------------------------------------------------------------------- badges
@@ -289,6 +392,33 @@ const handlers = {
     });
   },
 
+  /**
+   * A page is about to submit a login. Capture it before navigation destroys
+   * the document; the destination page (or a timer on an SPA) claims it.
+   */
+  async "aurapass:save-candidate"(message, sender) {
+    const tabId = sender.tab && sender.tab.id;
+    if (tabId === undefined || tabId === null) return ok({ stored: false });
+    const password = String(message.password ?? "");
+    if (!password) return ok({ stored: false });
+    await putPendingSave(tabId, {
+      username: String(message.username ?? "").slice(0, 512),
+      password: password.slice(0, 4096),
+      url: String(message.url ?? "").slice(0, 4096),
+      title: String(message.title ?? "").slice(0, 512),
+    });
+    return ok({ stored: true });
+  },
+
+  /** The top frame asks for (and atomically consumes) its pending candidate. */
+  async "aurapass:pending-save"(message, sender) {
+    if (!sender.tab) return ok({ pending: null });
+    if (sender.frameId !== undefined && sender.frameId !== 0) {
+      return ok({ pending: null });
+    }
+    return ok({ pending: await takePendingSave(sender.tab.id) });
+  },
+
   /** Popup asks for a credential to be typed into the page. */
   async "aurapass:fill"(message, sender) {
     const tabId = message.tabId ?? (sender.tab && sender.tab.id);
@@ -455,6 +585,7 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 api.tabs.onRemoved.addListener((tabId) => {
   pageMatches.delete(tabId);
+  dropPendingSave(tabId).catch(() => {});
 });
 
 api.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
@@ -471,6 +602,7 @@ if (api.alarms) {
     if (alarm.name !== "aurapass-keepalive") return;
     try {
       const settings = await getSettings();
+      await expirePendingSaves();
       if (!settings.token) return;
       const client = await ensureBridge();
       if (!client.token) return;

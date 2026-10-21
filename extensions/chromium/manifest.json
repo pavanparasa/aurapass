@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AuraPass",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "Fill logins and one-time codes from your local, offline-first AuraPass vault.",
   "minimum_chrome_version": "109",
   "icons": {

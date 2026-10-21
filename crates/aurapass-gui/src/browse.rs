@@ -77,7 +77,8 @@ impl BrowseState {
             category: self.category,
             tags: self.tag.iter().cloned().collect(),
             favorites_only: self.favorites_only,
-            include_trashed: self.bin,
+            include_trashed: false,
+            only_trashed: self.bin,
             sort: self.sort,
         }
     }
@@ -357,7 +358,10 @@ pub fn update(state: &mut AppState, message: Message) -> Task<AppMessage> {
         Message::Restore(id) => {
             if let Some(vault) = state.vault.as_mut() {
                 match vault.restore_item(id) {
-                    Ok(()) => state.notify("Item restored"),
+                    Ok(()) => {
+                        state.browse.selected = None;
+                        state.notify("Item restored");
+                    }
                     Err(e) => state.notify_error(e.to_string()),
                 }
             }

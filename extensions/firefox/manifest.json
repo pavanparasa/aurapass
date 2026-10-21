@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AuraPass",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "Fill logins and one-time codes from your local, offline-first AuraPass vault.",
   "author": "pa1",
   "browser_specific_settings": {
@@ -46,11 +46,16 @@
     "activeTab",
     "scripting",
     "clipboardWrite",
-    "alarms"
+    "alarms",
+    "nativeMessaging"
   ],
   "host_permissions": [
     "http://*/*",
-    "https://*/*"
+    "https://*/*",
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+    "ws://127.0.0.1/*",
+    "ws://localhost/*"
   ],
   "content_scripts": [
     {

@@ -23,7 +23,7 @@ which is exactly what Chrome verifies before loading the extension.
 
 Usage:
     pack-crx.py --dir extensions/chromium --key packaging/keys/chromium.pem \\
-                --out dist/aurapass-chromium-1.0.0.crx
+                --out dist/aurapass-chromium-1.0.4.crx
 
 The key is created (2048-bit RSA) when it does not exist. Keep it: the
 extension id and therefore updates are derived from it.

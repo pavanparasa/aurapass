@@ -141,10 +141,14 @@ for (const [key, input] of Object.entries(switches)) {
       defaultHint.hidden = !input.checked;
       if (input.checked) {
         // Extensions cannot write this preference; open the page that can.
+        // Chrome and Firefox use different settings pages.
+        const url = browserName() === "Firefox"
+          ? "about:preferences#privacy"
+          : "chrome://settings/passwords";
         try {
-          await api.tabs.create({ url: "chrome://settings/passwords" });
+          await api.tabs.create({ url });
         } catch {
-          /* Firefox and locked-down builds have no such page. */
+          /* Locked-down builds may block the browser's settings page. */
         }
       }
     }

@@ -11,8 +11,10 @@ Homepage: https://github.com/aurapass/aurapass
 Description: offline-first password manager
  AuraPass keeps passwords, one-time codes, notes and other secrets in a
  single encrypted vault on your own computer. Nothing leaves the machine:
- the vault is a local file, the database is local, and the browser bridge
- only ever listens on 127.0.0.1.
+ the vault is a local file and the database is local. Chromium talks to
+ the app through a loopback bridge; Firefox uses the browser's native
+ messaging channel, so it is not affected by HTTPS-Only or local-network
+ restrictions.
  .
  The vault is protected with Argon2id (a memory-hard key derivation
  function) and XChaCha20-Poly1305 authenticated encryption, in a
@@ -29,9 +31,10 @@ Description: offline-first password manager
  native file chooser.
  .
  This package installs:
-  * aurapass-desktop - the graphical application,
-  * aurapass         - the command-line tool,
-  * aurapass-bridge  - the localhost bridge for the browser extensions.
+  * aurapass-desktop     - the graphical application,
+  * aurapass             - the command-line tool,
+  * aurapass-bridge      - the localhost bridge for the browser extensions,
+  * aurapass-native-host - the Firefox native-messaging relay.
  .
  Browser extensions (Chromium and Firefox) are installed, unpacked, under
  /usr/share/aurapass/extensions/.

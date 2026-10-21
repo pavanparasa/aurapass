@@ -40,6 +40,9 @@ export const PORT_SPAN = 9;
 /** How long to wait for the pairing handshake acknowledgement. */
 export const HANDSHAKE_TIMEOUT_MS = 8000;
 
+/** How long the initial loopback socket may take to open. */
+export const CONNECT_TIMEOUT_MS = 5000;
+
 /** How long to wait for a single request/response round trip. */
 export const REQUEST_TIMEOUT_MS = 15000;
 
@@ -81,6 +84,9 @@ export class AuraPassBridge {
    * @param {string} [options.host] Host, defaults to `127.0.0.1`.
    * @param {number} [options.port] Preferred port, defaults to {@link DEFAULT_PORT}.
    * @param {boolean} [options.autoReconnect] Retry once on a dropped socket.
+   * @param {(url: string) => WebSocket} [options.createSocket] Transport
+   *   factory. Firefox passes one that uses native messaging, so the browser
+   *   never opens a TCP connection to localhost.
    */
   constructor(options = {}) {
     this.token = options.token || "";
@@ -88,6 +94,9 @@ export class AuraPassBridge {
     this.host = options.host || "127.0.0.1";
     this.port = options.port || DEFAULT_PORT;
     this.autoReconnect = options.autoReconnect !== false;
+    this.createSocket = typeof options.createSocket === "function"
+      ? options.createSocket
+      : (url) => new WebSocket(url);
 
     /** @type {WebSocket | null} */
     this.socket = null;
@@ -97,6 +106,8 @@ export class AuraPassBridge {
     /** Requests waiting for a reply, oldest first. */
     this.pending = [];
     this.status = null;
+    /** In-flight connection attempt, so concurrent calls share one socket. */
+    this._connectPromise = null;
   }
 
   /** Whether a handshake has completed and a session key is available. */
@@ -116,6 +127,22 @@ export class AuraPassBridge {
    * @param {boolean} [opts.scan] Try the default port and the next few.
    */
   async connect(opts = {}) {
+    if (this.isConnected) return this.status;
+    // Two requests can arrive while the socket is still handshaking (a page
+    // report and a save click, for example). Each one used to open its own
+    // socket and overwrite `this.key`, so replies from the losing socket failed
+    // authentication. Share one attempt instead.
+    if (this._connectPromise) return this._connectPromise;
+    const attempt = this._connect(opts);
+    this._connectPromise = attempt;
+    try {
+      return await attempt;
+    } finally {
+      if (this._connectPromise === attempt) this._connectPromise = null;
+    }
+  }
+
+  async _connect(opts = {}) {
     if (!this.token || !this.token.trim()) {
       throw new BridgeError(
         "This browser is not connected to AuraPass yet.",
@@ -147,7 +174,7 @@ export class AuraPassBridge {
     return new Promise((resolve, reject) => {
       let socket;
       try {
-        socket = new WebSocket(this.url(port));
+        socket = this.createSocket(this.url(port));
       } catch (error) {
         reject(new BridgeError(describe(error, "AuraPass is not running."), "offline"));
         return;
@@ -256,20 +283,14 @@ export class AuraPassBridge {
     return new Promise((resolve, reject) => {
       let socket;
       try {
-        socket = new WebSocket(this.url(port));
+        socket = this.createSocket(this.url(port));
       } catch (error) {
         reject(new BridgeError(describe(error, "AuraPass is not running."), "offline"));
         return;
       }
 
       let settled = false;
-      const timer = setTimeout(() => {
-        if (settled) return;
-        settled = true;
-        try { socket.close(); } catch { /* ignore */ }
-        reject(new BridgeError("AuraPass did not answer the connection request.", "timeout"));
-      }, PAIR_TIMEOUT_MS);
-
+      let timer = null;
       const fail = (reason, code) => {
         if (settled) return;
         settled = true;
@@ -277,6 +298,13 @@ export class AuraPassBridge {
         try { socket.close(); } catch { /* ignore */ }
         reject(new BridgeError(reason, code));
       };
+
+      // The long timeout is for the user's approval in the desktop app, and
+      // only makes sense after the socket is open. A blocked loopback socket
+      // must fail quickly so the next candidate port gets a chance.
+      timer = setTimeout(() => {
+        fail("Could not reach AuraPass on this port.", "offline");
+      }, CONNECT_TIMEOUT_MS);
 
       socket.addEventListener("error", () => {
         fail("Could not reach AuraPass. Is the desktop app running?", "offline");
@@ -303,6 +331,10 @@ export class AuraPassBridge {
         fail(reply.error || "The connection request was declined in AuraPass.", "pairing");
       });
       socket.addEventListener("open", () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          fail("AuraPass did not answer the connection request.", "timeout");
+        }, PAIR_TIMEOUT_MS);
         socket.send(JSON.stringify({
           type: "pair_request",
           protocol: PROTOCOL_VERSION,

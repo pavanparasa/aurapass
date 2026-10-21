@@ -6,8 +6,8 @@ copy to users.
 
 | Store | Upload | Notes |
 | --- | --- | --- |
-| Chrome Web Store | `dist/aurapass-chromium-1.0.0.zip` | The dashboard re-packages and signs it; our `.crx` is not uploadable. |
-| Firefox AMO | `dist/aurapass-firefox-1.0.0.xpi` (or the `.zip`) | AMO signs the `.xpi`; the unsigned file only installs in Developer Edition/Nightly. |
+| Chrome Web Store | `dist/aurapass-chromium-1.0.4.zip` | The dashboard re-packages and signs it; our `.crx` is not uploadable. |
+| Firefox AMO | `dist/aurapass-firefox-1.0.4.xpi` (or the `.zip`) | AMO signs the `.xpi`; the unsigned file only installs in Developer Edition/Nightly. |
 
 ## Why the local `.crx` says `CRX_REQUIRED_PROOF_MISSING`
 
@@ -50,12 +50,13 @@ AuraPass for Linux is required; the extension cannot read a vault by itself.
 
 | Permission | Why |
 | --- | --- |
-| `storage` | Remember the approval secret, the bridge port and the display preferences. |
+| `storage` | Remember the approval secret, the bridge port and the display preferences. A submitted login is held briefly in memory-backed `storage.session` so the save prompt can survive the page navigation; it is consumed or expires within five minutes and is cleared when the browser exits. |
 | `activeTab` / `scripting` | Fill the page the user is looking at when they pick a login. |
 | `clipboardWrite` | Copy a password or one-time code when the user asks. |
 | `alarms` | Wake the background worker periodically to reconnect to the local app. |
-| `http://*/*`, `https://*/*` | Detect login forms and fill them on the sites the user visits. Nothing leaves the browser except the loopback connection. |
-| Host `ws://127.0.0.1` | Not requested: WebSocket connections do not need a host permission. |
+| `nativeMessaging` (Firefox) | Talk to the small AuraPass native host installed by the desktop package. The host relays already-encrypted frames to the local app; no vault data is sent anywhere else. Firefox 153+ blocks plain loopback extension WebSockets via HTTPS-Only and Local Network Access rules, so this is the supported transport. |
+| `http://*/*`, `https://*/*` | Detect login forms and fill them on the sites the user visits. Nothing leaves the browser except the local app connection. |
+| Host `ws://127.0.0.1/*` (Firefox fallback) | Used only when the native host is not installed (for example an unpacked extension without the `.deb`). Chromium does not need it and does not request it. |
 
 ## Privacy practices (Chrome Web Store questionnaire)
 

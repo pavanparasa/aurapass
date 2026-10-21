@@ -16,16 +16,18 @@ if [ "$1" = "configure" ]; then
   cat <<'MESSAGE'
 AuraPass is installed.
 
-  aurapass-desktop   the graphical application
-  aurapass           the command-line tool
-  aurapass-bridge    the localhost bridge used by the browser extensions
+  aurapass-desktop     the graphical application
+  aurapass             the command-line tool
+  aurapass-bridge      the localhost bridge used by Chromium
+  aurapass-native-host the relay Firefox starts through native messaging
 
 Browser extensions live in /usr/share/aurapass/extensions/ as store-ready
 packages (.zip for Chromium, .xpi/.zip for Firefox) and unpacked folders.
+The Firefox native-messaging manifest is installed automatically.
 
   Chromium: chrome://extensions -> Developer mode -> Load unpacked -> chromium/
-  Firefox:  about:debugging#/runtime/this-firefox -> Load Temporary Add-on ->
-            firefox/manifest.json   (or install the XPI once AMO has signed it)
+  Firefox:  install the signed XPI, or use about:debugging to load
+            firefox/manifest.json temporarily.
 
 If Chrome is installed as a Flatpak it cannot see /usr/share. Copy the folder
 into your home first, then load that path:

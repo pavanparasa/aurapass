@@ -548,36 +548,57 @@ impl Item {
         self.expires_at.is_some_and(|t| t <= now)
     }
 
-    /// Case-insensitive substring match across the fields a user would search.
+    /// Case-insensitive, multi-word search across the fields a user would
+    /// search. Every whitespace-separated term must match somewhere: the
+    /// fields are joined into one lower-cased haystack, so
+    /// `"cloudflare markus"` finds a Cloudflare login whose username is
+    /// Markus regardless of which field each word came from.
     pub fn matches(&self, needle: &str) -> bool {
-        if needle.is_empty() {
+        let terms: Vec<String> = needle
+            .split_whitespace()
+            .map(str::to_lowercase)
+            .collect();
+        if terms.is_empty() {
             return true;
         }
-        let needle = needle.to_lowercase();
-        let hay = [
-            Some(self.title.as_str()),
-            self.subtitle.as_deref(),
-            self.username.as_deref(),
-            self.notes.as_str().into(),
-            self.primary_url(),
-        ];
-        if hay
-            .iter()
-            .flatten()
-            .any(|s| s.to_lowercase().contains(&needle))
-        {
-            return true;
+
+        let mut hay = String::new();
+        let mut push = |value: &str| {
+            if value.is_empty() {
+                return;
+            }
+            if !hay.is_empty() {
+                hay.push('\n');
+            }
+            hay.push_str(&value.to_lowercase());
+        };
+
+        push(&self.title);
+        if let Some(subtitle) = self.subtitle.as_deref() {
+            push(subtitle);
         }
-        if self.urls.iter().any(|u| u.to_lowercase().contains(&needle))
-            || self.tags.iter().any(|t| t.to_lowercase().contains(&needle))
-        {
-            return true;
+        if let Some(username) = self.username.as_deref() {
+            push(username);
+        }
+        push(&self.notes);
+        if let Some(url) = self.primary_url() {
+            push(url);
+        }
+        for url in &self.urls {
+            push(url);
+        }
+        for tag in &self.tags {
+            push(tag);
         }
         // Custom field labels and non-sensitive values are searchable too.
-        self.fields.iter().any(|f| {
-            f.label.to_lowercase().contains(&needle)
-                || (!f.sensitive && f.value.to_lowercase().contains(&needle))
-        })
+        for field in &self.fields {
+            push(&field.label);
+            if !field.sensitive {
+                push(&field.value);
+            }
+        }
+
+        terms.iter().all(|term| hay.contains(term.as_str()))
     }
 
     /// A one-line description used in list views.
@@ -810,5 +831,19 @@ mod tests {
         assert!(it.matches("github"));
         assert!(it.matches("WORK"));
         assert!(!it.matches("gitlab"));
+    }
+
+    #[test]
+    fn search_requires_every_word_across_fields() {
+        let mut it = Item::new(ItemKind::Login, "Cloudflare");
+        it.urls.push("https://dash.cloudflare.com/login".into());
+        it.username = Some("markus".into());
+
+        assert!(it.matches("cloudflare markus"));
+        assert!(it.matches("markus cloudflare"));
+        assert!(it.matches("dash markus"));
+        assert!(it.matches("  CLOUDFLARE   MARKUS  "));
+        assert!(!it.matches("cloudflare jane"));
+        assert!(!it.matches("github markus"));
     }
 }

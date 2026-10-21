@@ -672,16 +672,21 @@ impl AppState {
         // lock can offer its PIN without a detour through the vault list.
         self.unlock.path = path.display().to_string();
         self.unlock.key_file.clear();
+        let vault_name = vault.name().to_string();
         self.config.remember_vault(path, vault.name().to_string());
         self.save_config();
+        // Publish the unlocked vault before starting/syncing the bridge. The
+        // bridge reads `self.vault`; doing this after the sync left it holding
+        // `None` until the first autosave, so browser saves could be refused or
+        // go to a stale copy.
+        self.vault = Some(vault);
         if self.config.bridge.enabled {
             self.start_bridge();
         }
         self.sync_bridge_vault();
         if let Some(tray) = &self.tray {
-            tray.set_status(vault.name().to_string(), true);
+            tray.set_status(vault_name, true);
         }
-        self.vault = Some(vault);
         self.screen = Screen::Main;
         // Land on something: an empty detail pane is a poor first impression.
         self.browse.selected = self
@@ -796,6 +801,7 @@ impl AppState {
             iced::window::set_mode(self.window, iced::window::Mode::Windowed),
             iced::window::minimize(self.window, false),
             iced::window::gain_focus(self.window),
+            self.focus_unlock(),
         ])
     }
 
@@ -902,7 +908,26 @@ impl AppState {
         ]);
         tasks.push(center_on_monitor(id));
         tasks.push(iced::window::gain_focus(id));
+        // Opening the panel is always for searching: put the caret in the
+        // search box so the user can type immediately.
+        tasks.push(iced::widget::operation::focus(crate::assistant::SEARCH_ID));
+        tasks.push(iced::widget::operation::move_cursor_to_end(
+            crate::assistant::SEARCH_ID,
+        ));
         Task::batch(tasks)
+    }
+
+    /// Put the caret in the master-password or PIN field when the unlock screen
+    /// is showing. The two fields share one id because only one is in the tree
+    /// at a time.
+    fn focus_unlock(&self) -> Task<Message> {
+        if self.screen != Screen::Unlock || self.unlock.creating {
+            return Task::none();
+        }
+        Task::batch([
+            iced::widget::operation::focus(crate::unlock::UNLOCK_FIELD),
+            iced::widget::operation::move_cursor_to_end(crate::unlock::UNLOCK_FIELD),
+        ])
     }
 
     /// Answer the browser that is waiting for approval.
@@ -1038,7 +1063,7 @@ impl AppState {
                 if let Some(id) = id {
                     self.window = id;
                 }
-                Task::none()
+                self.focus_unlock()
             }
 
             Message::Window(id, event) => {
@@ -1057,7 +1082,7 @@ impl AppState {
 
             Message::Lock => {
                 self.lock_vault();
-                Task::none()
+                self.focus_unlock()
             }
 
             Message::Ask(action) => {
@@ -1202,6 +1227,7 @@ impl AppState {
                     if self.vault.is_some() {
                         self.lock_vault();
                     }
+                    return self.focus_unlock();
                 }
                 TrayCommand::Quit => return self.request_quit(),
             }

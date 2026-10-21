@@ -1,0 +1,9 @@
+{
+  "name": "aurapass_bridge",
+  "description": "AuraPass native-messaging bridge for Firefox",
+  "path": "/usr/bin/aurapass-native-host",
+  "type": "stdio",
+  "allowed_extensions": [
+    "aurapass@aurapass.invalid"
+  ]
+}

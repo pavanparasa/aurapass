@@ -23,6 +23,10 @@ use crate::widgets as w;
 /// How many generations are remembered.
 const HISTORY: usize = 12;
 
+/// Stable widget id for the login search, so opening the assistant can put the
+/// caret straight into it.
+pub const SEARCH_ID: &str = "aurapass-assistant-search";
+
 /// Which kind of secret the assistant is making.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
@@ -355,6 +359,7 @@ pub fn view(state: &AppState) -> Element<'_, Message> {
 fn search_field<'a>(assistant: &'a AssistantState) -> Element<'a, Message> {
     let mut row_items: Vec<Element<'a, Message>> = vec![
         iced::widget::text_input("Search logins and websites", &assistant.search)
+            .id(SEARCH_ID)
             .on_input(Message::Search)
             .padding([8, 10])
             .size(theme::T_BODY)
@@ -396,7 +401,7 @@ fn search_results(state: &AppState) -> Element<'_, Message> {
     }
 
     let mut list = column![].spacing(2);
-    for id in ids.into_iter().take(8) {
+    for id in ids {
         let Some(item) = vault.item(id) else {
             continue;
         };

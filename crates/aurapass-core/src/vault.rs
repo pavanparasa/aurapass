@@ -520,8 +520,11 @@ pub struct VaultQuery {
     pub tags: Vec<String>,
     /// Only favourites.
     pub favorites_only: bool,
-    /// Include items in the bin.
+    /// Include items in the bin alongside live items.
     pub include_trashed: bool,
+    /// Restrict the results to items in the bin. When set, this takes
+    /// precedence over [`Self::include_trashed`].
+    pub only_trashed: bool,
     /// Sort order.
     pub sort: SortOrder,
 }
@@ -532,7 +535,13 @@ impl VaultQuery {
         let mut items: Vec<&Item> = data
             .items
             .iter()
-            .filter(|i| self.include_trashed || !i.trashed)
+            .filter(|i| {
+                if self.only_trashed {
+                    i.trashed
+                } else {
+                    self.include_trashed || !i.trashed
+                }
+            })
             .filter(|i| self.kinds.is_empty() || self.kinds.contains(&i.kind))
             .filter(|i| self.category.is_none_or(|c| i.category == Some(c)))
             .filter(|i| !self.favorites_only || i.favorite)
@@ -1453,8 +1462,24 @@ mod tests {
         vault.trash_item(id).unwrap();
         assert_eq!(vault.stats().trashed, 1);
         assert_eq!(vault.stats().items, 0);
+        assert!(vault.query(&VaultQuery::default()).is_empty());
+        assert_eq!(
+            vault.query(&VaultQuery {
+                only_trashed: true,
+                ..Default::default()
+            }),
+            vec![id]
+        );
+        assert_eq!(
+            vault.query(&VaultQuery {
+                include_trashed: true,
+                ..Default::default()
+            }),
+            vec![id]
+        );
         vault.restore_item(id).unwrap();
         assert_eq!(vault.stats().items, 1);
+        assert_eq!(vault.query(&VaultQuery::default()), vec![id]);
         vault.trash_item(id).unwrap();
         assert_eq!(vault.empty_bin(), 1);
         assert!(vault.item(id).is_none());

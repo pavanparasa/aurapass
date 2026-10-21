@@ -29,6 +29,12 @@
   let prefs = null;
   /** The shadow root holding the dropdown and the save banner. */
   let shadow = null;
+  /** Timer that claims a pending save on single-page forms. */
+  let saveTimer = null;
+  /** Login field -> the little AuraPass button sitting inside its right edge. */
+  const fieldTriggers = new Map();
+  let triggerScanQueued = false;
+  let triggerObserver = null;
 
   /** The appearance the user picked for the in-page menu ("system" default). */
   function resolvedTheme() {
@@ -47,6 +53,7 @@
     // its colours either way.
     if (panel) panel.dataset.apTheme = theme;
     if (banner) banner.dataset.apTheme = theme;
+    for (const trigger of fieldTriggers.values()) trigger.dataset.apTheme = theme;
   }
 
   // ------------------------------------------------------------- messaging
@@ -80,6 +87,8 @@
   }
 
   const USERNAME_HINTS = /user|email|login|account|phone|mobile|name|handle/i;
+  /** Buttons that commonly submit a sign-in or sign-up form. */
+  const SAVE_BUTTON = /sign\s?up|sign\s?in|log\s?in|register|create|join|get\s+started|continue|next|submit/i;
 
   /** The most plausible username field for a password input. */
   function usernameFieldFor(password) {
@@ -279,7 +288,7 @@
     const style = document.createElement("style");
     style.textContent = `
       :host { all: initial; }
-      .panel, .banner {
+      .panel, .banner, .trigger {
         --ap-accent: #4f46e5;
         --ap-accent-soft: #eef2ff;
         --ap-ink: #14161c;
@@ -292,8 +301,10 @@
       /* Dark mode belongs to this menu, not to the extension's own pages. */
       :host([data-ap-theme="dark"]) .panel,
       :host([data-ap-theme="dark"]) .banner,
+      :host([data-ap-theme="dark"]) .trigger,
       .panel[data-ap-theme="dark"],
-      .banner[data-ap-theme="dark"] {
+      .banner[data-ap-theme="dark"],
+      .trigger[data-ap-theme="dark"] {
         --ap-accent: #818cf8;
         --ap-accent-soft: #232544;
         --ap-ink: #eef0f6;
@@ -317,6 +328,26 @@
         animation: ap-in 90ms ease-out;
       }
       @keyframes ap-in { from { opacity: 0; transform: translateY(-3px); } }
+      .trigger {
+        position: fixed;
+        box-sizing: border-box;
+        width: 24px; height: 24px;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0; padding: 0;
+        border: 1px solid var(--ap-line);
+        border-radius: 7px;
+        background: var(--ap-panel);
+        color: var(--ap-accent);
+        box-shadow: 0 1px 3px rgba(15,23,42,.14);
+        cursor: pointer;
+        opacity: .94;
+        pointer-events: auto;
+        animation: ap-trigger-in 100ms ease-out;
+      }
+      .trigger:hover { background: var(--ap-accent-soft); opacity: 1; }
+      .trigger:focus-visible { outline: 2px solid var(--ap-accent); outline-offset: 1px; }
+      .trigger svg { width: 15px; height: 15px; display: block; }
+      @keyframes ap-trigger-in { from { opacity: 0; transform: scale(.9); } }
       .brand {
         display: flex; align-items: center; gap: 7px;
         padding: 9px 11px; color: var(--ap-ink);
@@ -371,24 +402,38 @@
         all: unset; cursor: pointer; color: var(--ap-accent); font-weight: 600;
       }
       .banner {
-        position: fixed; right: 16px; bottom: 16px; max-width: 324px;
+        position: fixed;
+        left: 50%; top: 50%;
+        width: min(420px, calc(100vw - 32px));
+        box-sizing: border-box;
+        transform: translate(-50%, -50%);
         background: var(--ap-panel); color: var(--ap-ink);
         border: 1px solid var(--ap-line);
-        border-radius: 13px;
-        box-shadow: 0 14px 36px rgba(15,23,42,.26), 0 2px 6px rgba(15,23,42,.08);
-        font: 13px/1.45 Inter, -apple-system, "Segoe UI", Roboto, sans-serif;
-        padding: 13px; display: flex; flex-direction: column; gap: 9px;
-        animation: ap-in 120ms ease-out;
+        border-radius: 16px;
+        box-shadow: 0 24px 64px rgba(15,23,42,.34), 0 4px 14px rgba(15,23,42,.12);
+        font: 14px/1.5 Inter, -apple-system, "Segoe UI", Roboto, sans-serif;
+        padding: 22px; display: flex; flex-direction: column; gap: 13px;
+        animation: ap-banner-in 140ms ease-out;
       }
-      .banner h4 { margin: 0; font-size: 13.5px; font-weight: 650; }
-      .banner p { margin: 0; color: var(--ap-muted); font-size: 12px; word-break: break-all; }
-      .row { display: flex; gap: 8px; justify-content: flex-end; }
+      @keyframes ap-banner-in {
+        from { opacity: 0; transform: translate(-50%, -46%) scale(.985); }
+        to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      }
+      .banner h4 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
+      .banner .subject {
+        margin: 0; color: var(--ap-ink); font-size: 15px; font-weight: 600;
+        line-height: 1.35; overflow-wrap: anywhere;
+      }
+      .banner p { margin: 0; color: var(--ap-muted); font-size: 13.5px; word-break: break-word; }
+      .row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 3px; }
       .row button {
-        all: unset; cursor: pointer; padding: 6px 11px; border-radius: 8px;
-        font-weight: 600; font-size: 12px;
+        all: unset; cursor: pointer; padding: 9px 17px; border-radius: 9px;
+        font-weight: 600; font-size: 13px;
       }
       .row button.primary { background: var(--ap-accent); color: #fff; }
+      .row button.primary:hover { filter: brightness(1.06); }
       .row button.ghost { color: var(--ap-muted); }
+      .row button.ghost:hover { background: var(--ap-well); }
     `;
     root.append(style);
     (document.body || document.documentElement).append(host);
@@ -412,6 +457,107 @@
     panelCount = null;
     panelList = null;
     overlayQuery = "";
+    scheduleTriggerRefresh();
+  }
+
+  // ---------------------------------------------------------- field triggers
+
+  const TRIGGER_SIZE = 24;
+
+  /** The username/password inputs that should carry a small AuraPass button. */
+  function triggerFields() {
+    const fields = new Set();
+    for (const form of loginForms()) {
+      if (form.username) fields.add(form.username);
+      if (form.password) fields.add(form.password);
+    }
+    return [...fields];
+  }
+
+  function removeAllTriggers() {
+    for (const trigger of fieldTriggers.values()) trigger.remove();
+    fieldTriggers.clear();
+  }
+
+  function hideTriggers() {
+    for (const trigger of fieldTriggers.values()) trigger.style.display = "none";
+  }
+
+  function ensureTrigger(field) {
+    let trigger = fieldTriggers.get(field);
+    if (trigger && trigger.isConnected) return trigger;
+    const root = ensureShadow();
+    trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "trigger";
+    trigger.dataset.apTheme = resolvedTheme();
+    trigger.tabIndex = -1;
+    trigger.title = "Open AuraPass";
+    trigger.setAttribute("aria-label", "Open AuraPass logins");
+    trigger.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>';
+    trigger.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (matches.length) showOverlay(field);
+    });
+    trigger.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    root.append(trigger);
+    fieldTriggers.set(field, trigger);
+    return trigger;
+  }
+
+  function positionTrigger(field, trigger) {
+    if (!field.isConnected || !isVisible(field)) {
+      trigger.style.display = "none";
+      return;
+    }
+    const rect = field.getBoundingClientRect();
+    if (rect.width < TRIGGER_SIZE + 8 || rect.height < 18
+      || rect.bottom < 0 || rect.top > window.innerHeight
+      || rect.right < 0 || rect.left > window.innerWidth) {
+      trigger.style.display = "none";
+      return;
+    }
+    trigger.style.display = "flex";
+    trigger.style.left = `${Math.round(rect.right - TRIGGER_SIZE - 4)}px`;
+    trigger.style.top = `${Math.round(rect.top + (rect.height - TRIGGER_SIZE) / 2)}px`;
+  }
+
+  /** Rebuild/position the icons. Cheap enough to call on scroll and DOM changes. */
+  function refreshFieldTriggers() {
+    if ((prefs && prefs.autofill === false) || !matches.length) {
+      removeAllTriggers();
+      return;
+    }
+    if (panel) {
+      hideTriggers();
+      return;
+    }
+    const wanted = triggerFields().filter(isVisible);
+    const keep = new Set(wanted);
+    for (const [field, trigger] of fieldTriggers) {
+      if (!keep.has(field) || !field.isConnected) {
+        trigger.remove();
+        fieldTriggers.delete(field);
+      }
+    }
+    for (const field of wanted) {
+      positionTrigger(field, ensureTrigger(field));
+    }
+  }
+
+  function scheduleTriggerRefresh() {
+    if (triggerScanQueued) return;
+    triggerScanQueued = true;
+    // Coalesce bursts of DOM/scroll events; the icons only need to land a
+    // frame or two after the layout settles.
+    setTimeout(() => {
+      triggerScanQueued = false;
+      refreshFieldTriggers();
+    }, 80);
   }
 
   function initials(title) {
@@ -429,12 +575,18 @@
     });
   }
 
-  /** Items matching the little search box, ignoring case. */
+  /** Items matching every word in the little search box, ignoring case. */
   function searchedMatches(query) {
-    const needle = String(query || "").trim().toLowerCase();
-    if (!needle) return matches;
-    return matches.filter((item) =>
-      `${item.title || ""} ${item.username || ""}`.toLowerCase().includes(needle));
+    const terms = String(query || "")
+      .trim()
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (!terms.length) return matches;
+    return matches.filter((item) => {
+      const hay = `${item.title || ""} ${item.username || ""} ${item.url || ""}`.toLowerCase();
+      return terms.every((term) => hay.includes(term));
+    });
   }
 
   function chooseOverlayItem(item) {
@@ -521,6 +673,7 @@
     panel = document.createElement("div");
     panel.className = "panel";
     panel.dataset.apTheme = resolvedTheme();
+    hideTriggers();
 
     const brand = document.createElement("div");
     brand.className = "brand";
@@ -578,6 +731,11 @@
 
     root.append(panel);
     renderOverlayList("");
+    // The dropdown opens because the user clicked a login field. Move the
+    // caret into search straight away so they can filter without a second
+    // click.
+    input.focus({ preventScroll: true });
+    input.setSelectionRange(input.value.length, input.value.length);
   }
 
   function positionOverlay(anchor) {
@@ -605,7 +763,7 @@
 
   let banner = null;
 
-  function showBanner(title, body, actions = []) {
+  function showBanner(title, body, actions = [], subject = "") {
     const root = ensureShadow();
     if (banner) banner.remove();
     banner = document.createElement("div");
@@ -615,7 +773,14 @@
     heading.textContent = title;
     const paragraph = document.createElement("p");
     paragraph.textContent = body;
-    banner.append(heading, paragraph);
+    banner.append(heading);
+    if (subject) {
+      const line = document.createElement("p");
+      line.className = "subject";
+      line.textContent = subject;
+      banner.append(line);
+    }
+    banner.append(paragraph);
     if (actions.length) {
       const row = document.createElement("div");
       row.className = "row";
@@ -666,43 +831,112 @@
     return { username, password };
   }
 
-  function offerSave(form) {
-    if (prefs && prefs.savePrompt === false) return;
+  function hostLabel(url) {
+    try {
+      return new URL(url || location.href).host || location.host;
+    } catch {
+      return location.host;
+    }
+  }
+
+  /** The credentials to offer, unless they were just filled from the vault. */
+  function candidateFor(form) {
     const credentials = formCredentials(form);
-    if (!credentials || !credentials.password) return;
+    if (!credentials || !credentials.password) return null;
     if (lastFilled && lastFilled.password === credentials.password
       && lastFilled.username === credentials.username) {
-      return; // Nothing new to offer.
+      return null; // Already in the vault; nothing new to offer.
     }
-    const known = matches.some((item) =>
-      (item.username || "").toLowerCase() === (credentials.username || "").toLowerCase());
-    if (known && lastFilled && lastFilled.id) return;
+    return {
+      username: credentials.username,
+      password: credentials.password,
+      url: location.href,
+      title: document.title || location.host,
+    };
+  }
+
+  /**
+   * Capture the login *before* the page navigates. A classic form post destroys
+   * this document, including any timeout and banner, so the background holds
+   * the candidate for the next page in this tab. Single-page forms stay put;
+   * the timer claims the same candidate and shows it here.
+   */
+  function captureSave(form) {
+    if (prefs && prefs.savePrompt === false) return;
+    const candidate = candidateFor(form);
+    if (!candidate) return;
+    send({ type: "aurapass:save-candidate", ...candidate });
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      saveTimer = null;
+      claimPendingSave();
+    }, 900);
+  }
+
+  /** Claim the candidate stored before navigation, if this is the top frame. */
+  async function claimPendingSave() {
+    if (window.top !== window) return;
+    const reply = await send({ type: "aurapass:pending-save" });
+    if (!reply || !reply.ok || !reply.pending) return;
+    if (prefs && prefs.savePrompt === false) return;
+    const candidate = reply.pending;
+    if (lastFilled && lastFilled.password === candidate.password
+      && lastFilled.username === candidate.username) {
+      return;
+    }
+    offerSave(candidate);
+  }
+
+  function offerSave(candidate) {
+    if (!candidate || !candidate.password) return;
+    const knownItem = matches.find((item) =>
+      (item.username || "").toLowerCase() === (candidate.username || "").toLowerCase());
+    const host = hostLabel(candidate.url);
+    const loginTitle = (
+      (knownItem && knownItem.title)
+      || candidate.title
+      || document.title
+      || host
+    ).trim() || host;
 
     showBanner(
-      known ? "Update this login?" : "Save this login to AuraPass?",
-      `${credentials.username || "(no username)"} — ${location.host}`,
+      knownItem ? "Update this login?" : "Save this login to AuraPass?",
+      `${candidate.username || "(no username)"} — ${host}`,
       [
         {
           label: "Save",
           primary: true,
           run: async () => {
+            showBanner("Saving…", "Writing to the open AuraPass vault…");
             const reply = await send({
               type: "aurapass:save",
-              url: location.href,
-              username: credentials.username,
-              password: credentials.password,
-              title: document.title || location.host,
+              url: candidate.url || location.href,
+              username: candidate.username,
+              password: candidate.password,
+              title: loginTitle,
             });
-            if (reply && reply.ok) {
-              lastFilled = { ...credentials, id: reply.outcome && reply.outcome.id };
-              showBanner("Saved", "Stored in AuraPass.");
+            const outcome = reply && reply.ok ? reply.outcome : null;
+            if (outcome && outcome.saved) {
+              lastFilled = { ...candidate, id: outcome.id };
+              showBanner(
+                outcome.updated ? "Login updated" : "Login saved",
+                outcome.updated
+                  ? "The password was updated in AuraPass."
+                  : "Stored in the open AuraPass vault.",
+              );
+              report();
             } else {
-              showBanner("Could not save", (reply && reply.error && reply.error.message) || "Try again.");
+              showBanner(
+                "Could not save",
+                (reply && reply.error && reply.error.message)
+                  || "AuraPass did not confirm the save. Is the vault unlocked?",
+              );
             }
           },
         },
         { label: "Not now", run: () => {} },
       ],
+      loginTitle,
     );
   }
 
@@ -712,25 +946,27 @@
       (event) => {
         const form = event.target;
         if (form instanceof HTMLFormElement && form.querySelector("input[type=password]")) {
-          // Let the page navigate first, then offer to save.
-          setTimeout(() => offerSave(form), 400);
+          captureSave(form);
         }
       },
       true,
     );
-    // Single-page apps often never fire `submit`.
+    // Single-page apps often never fire `submit` and many use a plain button.
     document.addEventListener(
       "click",
       (event) => {
         const target = event.target;
         if (!(target instanceof Element)) return;
-        const button = target.closest("button, input[type=submit], [role=button]");
+        const button = target.closest(
+          "button, input[type=submit], input[type=button], [role=button]",
+        );
         if (!button) return;
         const text = `${button.textContent || ""} ${button.value || ""} ${button.getAttribute("aria-label") || ""}`;
-        if (!/sign\s?in|log\s?in|submit|continue|next/i.test(text)) return;
+        if (!SAVE_BUTTON.test(text)) return;
+        if (!passwordFields().length) return;
         const form = button.closest("form")
           || (passwordFields()[0] && passwordFields()[0].form);
-        if (form) setTimeout(() => offerSave(form), 600);
+        captureSave(form);
       },
       true,
     );
@@ -751,25 +987,17 @@
       if (reply && reply.ok && Array.isArray(reply.items)) {
         matches = uniqueItems(reply.items);
         if (panel) renderOverlayList(overlayQuery);
+        else scheduleTriggerRefresh();
       }
     });
   }
 
   function attachFieldListeners() {
-    const handler = (event) => {
+    document.addEventListener("focusin", () => {
       if (prefs && prefs.autofill === false) return;
-      const target = event.target;
-      if (!(target instanceof HTMLInputElement)) return;
-      const isPassword = target.type === "password";
-      const isUsername = !isPassword && USERNAME_HINTS.test(
-        `${target.name} ${target.id} ${target.autocomplete} ${target.placeholder}`,
-      );
-      if (!isPassword && !isUsername) return;
-      if (!matches.length) return;
-      showOverlay(target);
-    };
-    document.addEventListener("focusin", handler, true);
-    document.addEventListener("focusout", (event) => {
+      scheduleTriggerRefresh();
+    }, true);
+    document.addEventListener("focusout", () => {
       // Let a click or Tab into the panel land before hiding.
       setTimeout(() => {
         if (!panel) return;
@@ -779,14 +1007,18 @@
         if (document.activeElement && panel.contains(document.activeElement)) return;
         hideOverlay();
       }, 150);
-      void event;
     }, true);
-    window.addEventListener("scroll", () => {
+    const reposition = () => {
       if (panel) hideOverlay();
-    }, true);
-    window.addEventListener("resize", () => {
-      if (panel) hideOverlay();
-    });
+      else scheduleTriggerRefresh();
+    };
+    window.addEventListener("scroll", reposition, true);
+    document.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
+    if (globalThis.MutationObserver && !triggerObserver) {
+      triggerObserver = new MutationObserver(scheduleTriggerRefresh);
+      triggerObserver.observe(document.documentElement, { childList: true, subtree: true });
+    }
   }
 
   api.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -814,11 +1046,14 @@
       case "aurapass:updated-matches":
         matches = uniqueItems(message.items);
         if (panel) renderOverlayList(overlayQuery);
+        else scheduleTriggerRefresh();
         sendResponse({ ok: true });
         return false;
       case "aurapass:settings-changed":
         if (message.settings) prefs = message.settings;
         applyTheme();
+        if (prefs && prefs.autofill === false) removeAllTriggers();
+        else scheduleTriggerRefresh();
         sendResponse({ ok: true });
         return false;
       default:
@@ -837,7 +1072,6 @@
     // Read the preferences once; every behaviour below is gated on them.
     const reply = await send({ type: "aurapass:settings" });
     if (reply && reply.ok && reply.settings) prefs = reply.settings;
-    if (prefs && prefs.autofill === false) return;
 
     // Honour the "work inside frames" preference: a sub-frame that the user
     // opted out of stops here, before it touches the page.
@@ -848,11 +1082,19 @@
     // The app's appearance choice can change while this page is open.
     globalThis.matchMedia?.("(prefers-color-scheme: dark)")
       .addEventListener?.("change", applyTheme);
+
+    // Save prompts are independent of autofill. Someone who turned the
+    // dropdown off still expects the browser to offer to store a new login.
     watchForms();
-    attachFieldListeners();
-    report();
+    if (!prefs || prefs.autofill !== false) {
+      attachFieldListeners();
+      report();
+    }
+    if (window.top === window) claimPendingSave();
   }
 
   boot();
-  window.addEventListener("pageshow", report);
+  window.addEventListener("pageshow", () => {
+    if (!prefs || prefs.autofill !== false) report();
+  });
 })();

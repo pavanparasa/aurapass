@@ -457,7 +457,18 @@ async function connect() {
   state.view = state.settings && state.settings.token ? "loading" : "pairing";
   state.pairingName = state.settings ? state.settings.pairedName : "";
   render();
-  const reply = await sendToBackground({ type: "aurapass:connect" });
+  let reply;
+  try {
+    reply = await sendToBackground({ type: "aurapass:connect" });
+  } catch (error) {
+    // The background worker can be absent while Firefox starts it, or the
+    // native/WebSocket transport can fail before it answers. Show that instead
+    // of leaving the "Waiting for AuraPass…" spinner running forever.
+    state.view = "offline";
+    state.error = { message: describeError(error), code: "offline" };
+    render();
+    return;
+  }
   if (!reply.ok || reply.connected !== true) {
     state.settings = await getSettings();
     state.view = reply.error && reply.error.code === "no-token" ? "setup" : "offline";
@@ -535,9 +546,15 @@ function applyAppearance(appearance) {
  * again, while a direct hand-off would only show "not approved" forever.
  */
 async function boot() {
-  state.settings = await getSettings();
-  applyAppearance(state.settings.appearance);
-  await connect();
+  try {
+    state.settings = await getSettings();
+    applyAppearance(state.settings.appearance);
+    await connect();
+  } catch (error) {
+    state.view = "offline";
+    state.error = { message: describeError(error), code: "offline" };
+    render();
+  }
 }
 
 boot();

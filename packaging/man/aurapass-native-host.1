@@ -1,0 +1,25 @@
+.TH AURAPASS-NATIVE-HOST 1 "2026-10-21" "AuraPass 1.0.1" "User Commands"
+.SH NAME
+aurapass-native-host \- Firefox native-messaging relay for AuraPass
+.SH SYNOPSIS
+.B aurapass-native-host
+.SH DESCRIPTION
+.B aurapass-native-host
+is started by Firefox, not by the user. It speaks the browser's native-messaging
+protocol on standard input and output and relays the already-encrypted frames
+to the local AuraPass bridge. The extension never opens a loopback WebSocket in
+Firefox, so HTTPS-Only Mode and Local Network Access restrictions do not affect
+it.
+.PP
+The native-messaging manifest is installed at
+.I /usr/lib/mozilla/native-messaging-hosts/aurapass_bridge.json
+and only allows the signed extension id
+.IR aurapass@aurapass.invalid .
+.SH ENVIRONMENT
+.TP
+.B AURAPASS_CONFIG_DIR
+Overrides the directory that holds the bridge port and pairing token.
+.SH SEE ALSO
+.BR aurapass (1),
+.BR aurapass-bridge (1),
+.BR aurapass-desktop (1)

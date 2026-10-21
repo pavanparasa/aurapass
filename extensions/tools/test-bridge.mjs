@@ -53,7 +53,7 @@ async function expectError(name, fn, code) {
 
 const bridge = new AuraPassBridge({
   token,
-  client: "aurapass-interop/1.0.0",
+  client: "aurapass-interop/1.0.4",
   port,
   autoReconnect: false,
 });

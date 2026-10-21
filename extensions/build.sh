@@ -92,6 +92,24 @@ for target in "${TARGETS[@]}"; do
         if (!existsSync(`${dir}/${file}`)) problems.push(`missing content script: ${file}`);
       }
     }
+    // Firefox and Chromium need different background declarations. Catch a
+    // Chromium build accidentally packaged as a Firefox add-on (AMO rejects
+    // service_worker without background.scripts and the Gecko ID).
+    const firefox = dir.endsWith("/firefox");
+    const background = manifest.background || {};
+    if (firefox) {
+      if (!manifest.browser_specific_settings?.gecko?.id) {
+        problems.push("Firefox manifest needs browser_specific_settings.gecko.id");
+      }
+      if (background.service_worker) {
+        problems.push("Firefox manifest must not set background.service_worker");
+      }
+      if (!Array.isArray(background.scripts) || !background.scripts.length) {
+        problems.push("Firefox manifest needs background.scripts");
+      }
+    } else if (!background.service_worker) {
+      problems.push("Chromium manifest needs background.service_worker");
+    }
     // Every relative import must point at a real file.
     const stack = ["background.js", "popup.js", "options.js", "content.js"];
     const seen = new Set();
