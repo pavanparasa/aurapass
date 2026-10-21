@@ -63,8 +63,6 @@ aurapass 1.0.1
 
 ## Limitations
 
-AuraPass is a working clone, not a finished commercial product. Known limits:
-
 * **One writer at a time.** The desktop app, the CLI and a standalone
   `aurapass-bridge` all read and write the same vault file. If two of them are
   open on the same vault, the last one to save wins. Run one at a time.
